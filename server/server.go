@@ -6,7 +6,6 @@ import (
 	"net/http"
 )
 
-// Chat server.
 type Server struct {
 	path         string
 	clients      []*Client
@@ -14,6 +13,7 @@ type Server struct {
 	removeClient chan *Client
 	sendAll      chan *Message
 	messages     []*Message
+	channels     map[string]*Channel
 }
 
 // Create new chat server.
@@ -23,19 +23,20 @@ func NewServer(path string) *Server {
 	removeClient := make(chan *Client)
 	sendAll := make(chan *Message)
 	messages := make([]*Message, 0)
-	return &Server{path, clients, addClient, removeClient, sendAll, messages}
+	channels := make(map[string]*Channel)
+	return &Server{path, clients, addClient, removeClient, sendAll, messages, channels}
 }
 
-func (self *Server) AddClient() chan<- *Client {
-	return (chan<- *Client)(self.addClient)
+func (self *Server) AddClient() chan <- *Client {
+	return (chan <- *Client)(self.addClient)
 }
 
-func (self *Server) RemoveClient() chan<- *Client {
-	return (chan<- *Client)(self.removeClient)
+func (self *Server) RemoveClient() chan <- *Client {
+	return (chan <- *Client)(self.removeClient)
 }
 
-func (self *Server) SendAll() chan<- *Message {
-	return (chan<- *Message)(self.sendAll)
+func (self *Server) SendAll() chan <- *Message {
+	return (chan <- *Message)(self.sendAll)
 }
 
 func (self *Server) Messages() []*Message {
@@ -56,7 +57,20 @@ func (self *Server) Listen() {
 		self.addClient <- client
 
 		channel := ws.Request().URL.Query().Get("channel")
-		log.Println("Channel: ", channel)
+		//TODO: create channel and add client
+		ch, ok := self.channels[channel];
+		if ok {
+			ch.addClient <- client
+			log.Printf("Channel %s joined", channel)
+		} else {
+			ch := NewChannel(channel)
+			go ch.Listen()
+			ch.addClient <- client
+			self.channels[channel] = ch
+			log.Printf("Created channel %s", channel)
+		}
+
+		client.channels = append(client.channels, channel)
 
 		client.Listen()
 		defer ws.Close()
@@ -81,7 +95,7 @@ func (self *Server) Listen() {
 			log.Println("Remove client")
 			for i := range self.clients {
 				if self.clients[i] == c {
-					self.clients = append(self.clients[:i], self.clients[i+1:]...)
+					self.clients = append(self.clients[:i], self.clients[i + 1:]...)
 					break
 				}
 			}

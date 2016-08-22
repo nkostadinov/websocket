@@ -8,11 +8,11 @@ import (
 )
 
 type Rest struct {
-	sendAll chan *Message
+	channels     map[string]*Channel
 }
 
 func NewRestServer(server *Server) *Rest {
-	return &Rest{server.sendAll}
+	return &Rest{server.channels}
 }
 
 func (self *Rest) PostOnly(h http.HandlerFunc) http.HandlerFunc {
@@ -36,8 +36,10 @@ func (self *Rest) restHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	channel := r.URL.Query().Get("channel")
 	msg := &Message{Channel: channel, Body: string(body)}
-	self.sendAll <- msg
-	log.Printf("body: %s, channel: %s", body, channel)
+	if ch, ok := self.channels[channel]; ok {
+		ch.sendAll <- msg
+	}
+	log.Printf("[REST] body: %s, channel: %s", body, channel)
 }
 
 func (self *Rest) ListenRest() {

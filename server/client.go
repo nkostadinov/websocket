@@ -7,14 +7,11 @@ import (
 
 // Chat client.
 type Client struct {
-	ws     *websocket.Conn
-	server *Server
-	ch     chan *Message
-	done   chan bool
-}
-
-type Subscribtions struct {
-	clients *[]Client
+	ws       *websocket.Conn
+	server   *Server
+	ch       chan *Message
+	done     chan bool
+	channels []string
 }
 
 // write channel buffer size
@@ -31,8 +28,9 @@ func NewClient(ws *websocket.Conn, server *Server) *Client {
 
 	ch := make(chan *Message, channelBufSize)
 	done := make(chan bool)
+	channels := make([]string, 0)
 
-	return &Client{ws, server, ch, done}
+	return &Client{ws, server, ch, done, channels}
 }
 
 // Get websocket connection.
@@ -41,13 +39,13 @@ func (self *Client) Conn() *websocket.Conn {
 }
 
 // Get Write channel
-func (self *Client) Write() chan<- *Message {
-	return (chan<- *Message)(self.ch)
+func (self *Client) Write() chan <- *Message {
+	return (chan <- *Message)(self.ch)
 }
 
 // Get done channel.
-func (self *Client) Done() chan<- bool {
-	return (chan<- bool)(self.done)
+func (self *Client) Done() chan <- bool {
+	return (chan <- bool)(self.done)
 }
 
 // Listen Write and Read request via chanel
@@ -70,6 +68,10 @@ func (self *Client) listenWrite() {
 		// receive done request
 		case <-self.done:
 			self.server.RemoveClient() <- self
+			for _, ch := range self.channels {
+				log.Println("removing from ", ch)
+				self.server.channels[ch].removeClient <- self
+			}
 			self.done <- true // for listenRead method
 			return
 		}
@@ -85,6 +87,10 @@ func (self *Client) listenRead() {
 		// receive done request
 		case <-self.done:
 			self.server.RemoveClient() <- self
+			for _, ch := range self.channels {
+				log.Println("removing from ", ch)
+				self.server.channels[ch].removeClient <- self
+			}
 			self.done <- true // for listenWrite method
 			return
 
@@ -93,11 +99,15 @@ func (self *Client) listenRead() {
 			var msg Message
 			err := websocket.JSON.Receive(self.ws, &msg)
 			if err != nil {
-				self.done <- true
+				if(err.Error() == "EOF") {
+					self.done <- true
+				}
+
+				log.Println("String not json.", err)
 			}
-			//} else {
-			//	self.server.SendAll() <- &msg
-			//}
+		//} else {
+		//	self.server.SendAll() <- &msg
+		//}
 		}
 	}
 }
