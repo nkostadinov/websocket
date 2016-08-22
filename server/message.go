@@ -1,10 +1,18 @@
 package server
 
+import (
+	"encoding/json"
+)
+
 type Message struct {
-	Author string `json:"author"`
+	Channel string `json:"channel"`
 	Body   string `json:"body"`
 }
 
 func (self *Message) String() string {
-	return self.Author + " says " + self.Body
+	b, err := json.Marshal(self)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

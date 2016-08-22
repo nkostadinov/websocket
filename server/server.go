@@ -54,6 +54,10 @@ func (self *Server) Listen() {
 	onConnected := func(ws *websocket.Conn) {
 		client := NewClient(ws, self)
 		self.addClient <- client
+
+		channel := ws.Request().URL.Query().Get("channel")
+		log.Println("Channel: ", channel)
+
 		client.Listen()
 		defer ws.Close()
 	}

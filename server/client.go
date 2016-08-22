@@ -13,6 +13,10 @@ type Client struct {
 	done   chan bool
 }
 
+type Subscribtions struct {
+	clients *[]Client
+}
+
 // write channel buffer size
 const channelBufSize = 1000
 

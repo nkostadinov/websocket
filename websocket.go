@@ -1,17 +1,19 @@
 package main
 
 import (
-	"./server"
+	"github.com/nkostadinov/websocket/server"
 	"net/http"
 )
 
+
 // This example demonstrates a trivial echo server.
 func main() {
-	//rest server
-	go server.ListenRest()
 	//wesocket server
 	webserver := server.NewServer("/")
 	go webserver.Listen()
+	//rest server
+	restserver := server.NewRestServer(webserver);
+	go restserver.ListenRest()
 
 	err := http.ListenAndServe(":5000", nil)
 	if err != nil {
