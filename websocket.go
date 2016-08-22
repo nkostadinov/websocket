@@ -5,14 +5,13 @@ import (
 	"net/http"
 )
 
-
 // This example demonstrates a trivial echo server.
 func main() {
 	//wesocket server
 	webserver := server.NewServer("/")
 	go webserver.Listen()
 	//rest server
-	restserver := server.NewRestServer(webserver);
+	restserver := server.NewRestServer(webserver)
 	go restserver.ListenRest()
 
 	err := http.ListenAndServe(":5000", nil)

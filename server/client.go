@@ -94,9 +94,10 @@ func (self *Client) listenRead() {
 			err := websocket.JSON.Receive(self.ws, &msg)
 			if err != nil {
 				self.done <- true
-			} else {
-				self.server.SendAll() <- &msg
 			}
+			//} else {
+			//	self.server.SendAll() <- &msg
+			//}
 		}
 	}
 }

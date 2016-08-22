@@ -6,7 +6,7 @@ import (
 
 type Message struct {
 	Channel string `json:"channel"`
-	Body   string `json:"body"`
+	Body    string `json:"body"`
 }
 
 func (self *Message) String() string {

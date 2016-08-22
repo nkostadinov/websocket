@@ -1,21 +1,21 @@
 package server
 
 import (
+	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
-	"io/ioutil"
-	"io"
 )
 
 type Rest struct {
-	sendAll      chan *Message
+	sendAll chan *Message
 }
 
 func NewRestServer(server *Server) *Rest {
 	return &Rest{server.sendAll}
 }
 
-func  (self *Rest) PostOnly(h http.HandlerFunc) http.HandlerFunc {
+func (self *Rest) PostOnly(h http.HandlerFunc) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
@@ -35,9 +35,9 @@ func (self *Rest) restHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	channel := r.URL.Query().Get("channel")
-	msg := &Message{ Channel: channel, Body: string(body) };
-	self.sendAll <- msg;
-	log.Printf("body: %s, channel: %s", body, channel);
+	msg := &Message{Channel: channel, Body: string(body)}
+	self.sendAll <- msg
+	log.Printf("body: %s, channel: %s", body, channel)
 }
 
 func (self *Rest) ListenRest() {
