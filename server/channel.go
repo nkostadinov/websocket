@@ -30,6 +30,11 @@ func (self *Channel) Listen() {
 		// Add new a client
 		case c := <-self.addClient:
 			log.Println("Added new client to channel")
+			for _, cli := range self.clients {
+				if cli == c {
+					return
+				}
+			}
 			self.clients = append(self.clients, c)
 			log.Println("Now", len(self.clients), "clients connected in channel ", self.name)
 

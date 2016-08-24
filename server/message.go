@@ -16,3 +16,16 @@ func (self *Message) String() string {
 	}
 	return string(b)
 }
+
+type Event struct {
+	Event	string	`json:"_event"`
+	Data	string	`json:"_data"`
+}
+
+func (self *Event) String() string {
+	b, err := json.Marshal(self)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}

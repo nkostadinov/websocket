@@ -45,6 +45,23 @@ func (self *Server) Messages() []*Message {
 	return msgs
 }
 
+func (self *Server) joinChannel(channel string, client *Client) {
+	ch, ok := self.channels[channel];
+	if ok {
+		ch.addClient <- client
+		go ch.Listen()
+		log.Printf("Channel %s joined", channel)
+	} else {
+		ch := NewChannel(channel)
+		self.channels[channel] = ch
+		go ch.Listen()
+		ch.addClient <- client
+		log.Printf("Created channel %s", channel)
+	}
+
+	client.channels = append(client.channels, channel)
+}
+
 // Listen and serve.
 // It serves client connection and broadcast request.
 func (self *Server) Listen() {
@@ -57,20 +74,8 @@ func (self *Server) Listen() {
 		self.addClient <- client
 
 		channel := ws.Request().URL.Query().Get("channel")
-		//TODO: create channel and add client
-		ch, ok := self.channels[channel];
-		if ok {
-			ch.addClient <- client
-			log.Printf("Channel %s joined", channel)
-		} else {
-			ch := NewChannel(channel)
-			go ch.Listen()
-			ch.addClient <- client
-			self.channels[channel] = ch
-			log.Printf("Created channel %s", channel)
-		}
 
-		client.channels = append(client.channels, channel)
+		self.joinChannel(channel, client)
 
 		client.Listen()
 		defer ws.Close()
@@ -84,10 +89,12 @@ func (self *Server) Listen() {
 		// Add new a client
 		case c := <-self.addClient:
 			log.Println("Added new client")
-			self.clients = append(self.clients, c)
-			for _, msg := range self.messages {
-				c.Write() <- msg
+			for _, cli := range self.clients {
+				if cli == c {
+					return
+				}
 			}
+			self.clients = append(self.clients, c)
 			log.Println("Now", len(self.clients), "clients connected.")
 
 		// remove a client

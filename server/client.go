@@ -3,6 +3,8 @@ package server
 import (
 	"golang.org/x/net/websocket"
 	"log"
+	"encoding/json"
+	"io"
 )
 
 // Chat client.
@@ -10,6 +12,7 @@ type Client struct {
 	ws       *websocket.Conn
 	server   *Server
 	ch       chan *Message
+	events   chan *Event
 	done     chan bool
 	channels []string
 }
@@ -29,8 +32,9 @@ func NewClient(ws *websocket.Conn, server *Server) *Client {
 	ch := make(chan *Message, channelBufSize)
 	done := make(chan bool)
 	channels := make([]string, 0)
+	events := make(chan *Event)
 
-	return &Client{ws, server, ch, done, channels}
+	return &Client{ws, server, ch, events, done, channels}
 }
 
 // Get websocket connection.
@@ -64,7 +68,12 @@ func (self *Client) listenWrite() {
 		case msg := <-self.ch:
 			log.Println("Send:", msg)
 			websocket.JSON.Send(self.ws, msg)
-
+		//receive event from client
+		case event := <-self.events:
+			log.Println("Event: ", event)
+			if(event.Event == "join") {
+				self.server.joinChannel(event.Data, self)
+			}
 		// receive done request
 		case <-self.done:
 			self.server.RemoveClient() <- self
@@ -93,21 +102,24 @@ func (self *Client) listenRead() {
 			}
 			self.done <- true // for listenWrite method
 			return
-
-		// read data from websocket connection
 		default:
-			var msg Message
-			err := websocket.JSON.Receive(self.ws, &msg)
-			if err != nil {
-				if(err.Error() == "EOF") {
+			var in []byte
+			if err := websocket.Message.Receive(self.ws, &in); err != nil {
+				if err == io.EOF {
 					self.done <- true
+					return
+				} else if err != nil {
+					panic(err)
 				}
-
-				log.Println("String not json.", err)
 			}
-		//} else {
-		//	self.server.SendAll() <- &msg
-		//}
+			log.Println("Recieved: ", string(in))
+
+			var event Event
+			if err := json.Unmarshal(in, &event); err != nil {
+				panic(err)
+			}
+			self.events <- &event
+
 		}
 	}
 }
