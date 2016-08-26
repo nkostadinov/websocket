@@ -35,7 +35,12 @@ func (self *Rest) restHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 	channel := r.URL.Query().Get("channel")
-	msg := &Message{Channel: channel, Body: string(body)}
+	//get the session id from header
+	session := r.Header.Get("session");
+
+	log.Printf("SessionID: %s", session)
+
+	msg := &Message{Channel: channel, Body: string(body), session: session}
 	if ch, ok := self.channels[channel]; ok {
 		ch.sendAll <- msg
 	}

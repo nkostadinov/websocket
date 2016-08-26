@@ -15,13 +15,14 @@ type Client struct {
 	events   chan *Event
 	done     chan bool
 	channels []string
+	session	 string
 }
 
 // write channel buffer size
 const channelBufSize = 1000
 
 // Create new chat client.
-func NewClient(ws *websocket.Conn, server *Server) *Client {
+func NewClient(ws *websocket.Conn, server *Server, session string) *Client {
 
 	if ws == nil {
 		panic("ws cannot be nil")
@@ -34,7 +35,7 @@ func NewClient(ws *websocket.Conn, server *Server) *Client {
 	channels := make([]string, 0)
 	events := make(chan *Event)
 
-	return &Client{ws, server, ch, events, done, channels}
+	return &Client{ws, server, ch, events, done, channels, session}
 }
 
 // Get websocket connection.
@@ -60,7 +61,7 @@ func (self *Client) Listen() {
 
 // Listen write request via chanel
 func (self *Client) listenWrite() {
-	log.Println("Listening write to client")
+	//log.Println("Listening write to client")
 	for {
 		select {
 
@@ -89,7 +90,7 @@ func (self *Client) listenWrite() {
 
 // Listen read request via chanel
 func (self *Client) listenRead() {
-	log.Println("Listening read from client")
+	//log.Println("Listening read from client")
 	for {
 		select {
 

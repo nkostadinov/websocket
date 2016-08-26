@@ -70,7 +70,12 @@ func (self *Server) Listen() {
 
 	// websocket handler
 	onConnected := func(ws *websocket.Conn) {
-		client := NewClient(ws, self)
+		session, err := ws.Request().Cookie("PHPSESSID")
+		if err != nil {
+			panic(err)
+		}
+
+		client := NewClient(ws, self, session.Value)
 		self.addClient <- client
 
 		channel := ws.Request().URL.Query().Get("channel")
@@ -81,22 +86,21 @@ func (self *Server) Listen() {
 		defer ws.Close()
 	}
 	http.Handle(self.path, websocket.Handler(onConnected))
-	log.Println("Created handler")
+	//log.Println("Created handler")
 
 	for {
 		select {
 
 		// Add new a client
 		case c := <-self.addClient:
-			log.Println("Added new client")
 			for _, cli := range self.clients {
 				if cli == c {
 					return
 				}
 			}
 			self.clients = append(self.clients, c)
+			log.Printf("Added new client (%s)", c.session)
 			log.Println("Now", len(self.clients), "clients connected.")
-
 		// remove a client
 		case c := <-self.removeClient:
 			log.Println("Remove client")
@@ -109,7 +113,7 @@ func (self *Server) Listen() {
 
 		// broadcast message for all clients
 		case msg := <-self.sendAll:
-			log.Println("Send all:", msg)
+			log.Println("Send all*:", msg)
 			self.messages = append(self.messages, msg)
 			for _, c := range self.clients {
 				c.Write() <- msg

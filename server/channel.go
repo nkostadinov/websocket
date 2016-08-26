@@ -22,14 +22,14 @@ func NewChannel(channel string) *Channel {
 }
 
 func (self *Channel) Listen() {
-	log.Println("Listening ", self.name)
+	//log.Println("Listening ", self.name)
 
 	for {
 		select {
 
 		// Add new a client
 		case c := <-self.addClient:
-			log.Println("Added new client to channel")
+			//log.Println("Added new client to channel")
 			for _, cli := range self.clients {
 				if cli == c {
 					return
@@ -50,9 +50,11 @@ func (self *Channel) Listen() {
 
 		// broadcast message for all clients
 		case msg := <-self.sendAll:
-			log.Println("Send all in channel:", msg)
+			log.Printf("Send all in channel except %s: %s", msg.session, msg)
 			for _, c := range self.clients {
-				c.Write() <- msg
+				if c.session != msg.session {
+					c.Write() <- msg
+				}
 			}
 		}
 	}
